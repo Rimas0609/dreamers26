@@ -1,128 +1,178 @@
 "use client"
 
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Bubbles } from "@/components/bubbles"
+import { UnderwaterFx } from "@/components/underwater-fx"
 import { WelcomeModal } from "@/components/welcome-modal"
+
+// ==========================================
+// OPTIONAL NO BUTTON ESCAPE SOUND
+// ==========================================
+// const ESCAPE_SOUND = "/sounds/no-escape.mp3";
+const ESCAPE_SOUND = ""
+
+const SAFE_MARGIN = 20 // keep the fleeing button this far from every edge
+const YES_GAP = 24 // keep the NO button clear of the YES button
 
 export function UnderwaterExperience() {
   const [modalOpen, setModalOpen] = useState(false)
-  const [noMoved, setNoMoved] = useState(false)
+  const [celebrating, setCelebrating] = useState(false)
+
+  const [fled, setFled] = useState(false)
   const [noPos, setNoPos] = useState({ x: 0, y: 0 })
-  const [dodges, setDodges] = useState(0)
-  const areaRef = useRef<HTMLDivElement>(null)
+
   const noRef = useRef<HTMLButtonElement>(null)
+  const yesRef = useRef<HTMLButtonElement>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
-  const teases = [
-    "No",
-    "Are you sure?",
-    "Really?",
-    "Think again!",
-    "Catch me first!",
-    "Not so fast!",
-    "The sea says yes",
-  ]
+  // Prepare the optional escape sound once (only if a source is provided)
+  useEffect(() => {
+    if (ESCAPE_SOUND && typeof Audio !== "undefined") {
+      audioRef.current = new Audio(ESCAPE_SOUND)
+      audioRef.current.volume = 0.5
+    }
+  }, [])
 
-  const fleeNo = useCallback(() => {
-    const area = areaRef.current
+  // Pick a viewport-safe position that stays fully visible and clear of the YES button
+  const computeSafePosition = useCallback(() => {
     const btn = noRef.current
-    if (!area || !btn) return
-    const a = area.getBoundingClientRect()
-    const b = btn.getBoundingClientRect()
-    const maxX = Math.max(40, a.width - b.width - 24)
-    const maxY = Math.max(40, a.height - b.height - 24)
-    // Random offset relative to the button's natural (centered) position
-    const nextX = (Math.random() - 0.5) * maxX
-    const nextY = (Math.random() - 0.5) * maxY
-    setNoPos({ x: Math.round(nextX), y: Math.round(nextY) })
-    setNoMoved(true)
-    setDodges((d) => Math.min(d + 1, teases.length - 1))
-  }, [teases.length])
+    if (!btn) return { x: SAFE_MARGIN, y: SAFE_MARGIN }
+
+    const bw = btn.offsetWidth
+    const bh = btn.offsetHeight
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+
+    const minX = SAFE_MARGIN
+    const minY = SAFE_MARGIN
+    const maxX = Math.max(minX, vw - bw - SAFE_MARGIN)
+    const maxY = Math.max(minY, vh - bh - SAFE_MARGIN)
+
+    const yes = yesRef.current?.getBoundingClientRect()
+
+    for (let attempt = 0; attempt < 24; attempt++) {
+      const x = minX + Math.random() * (maxX - minX)
+      const y = minY + Math.random() * (maxY - minY)
+
+      if (yes) {
+        const overlapsYes =
+          x < yes.right + YES_GAP &&
+          x + bw > yes.left - YES_GAP &&
+          y < yes.bottom + YES_GAP &&
+          y + bh > yes.top - YES_GAP
+        if (overlapsYes) continue
+      }
+      return { x: Math.round(x), y: Math.round(y) }
+    }
+    // Fallback: a corner that is always inside the viewport
+    return { x: maxX, y: minY }
+  }, [])
+
+  const flee = useCallback(() => {
+    setNoPos(computeSafePosition())
+    setFled(true)
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0
+      void audioRef.current.play().catch(() => {})
+    }
+  }, [computeSafePosition])
+
+  // Keep the fleeing button inside the viewport on resize / orientation change
+  useEffect(() => {
+    if (!fled) return
+    const onResize = () => setNoPos(computeSafePosition())
+    window.addEventListener("resize", onResize)
+    window.addEventListener("orientationchange", onResize)
+    return () => {
+      window.removeEventListener("resize", onResize)
+      window.removeEventListener("orientationchange", onResize)
+    }
+  }, [fled, computeSafePosition])
+
+  const handleYes = useCallback(() => {
+    setCelebrating(true)
+    window.setTimeout(() => {
+      setCelebrating(false)
+      setModalOpen(true)
+    }, 550)
+  }, [])
 
   return (
-    <main className="relative min-h-[100svh] w-full overflow-hidden bg-background">
-      {/* Responsive artwork backgrounds — original artwork + typography preserved */}
-      <picture aria-hidden="true">
-        <source media="(max-width: 767px)" srcSet="/images/underwater-mobile.jpg" />
-        <img
-          src="/images/underwater-desktop.jpg"
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover"
-          fetchPriority="high"
-        />
-      </picture>
+    <main className="fixed inset-0 overflow-hidden bg-background">
+      {/* Responsive artwork — mobile (<=767px) vs tablet/desktop (>=768px). Original art + typography preserved. */}
+      <div className="animate-water absolute inset-0">
+        <picture aria-hidden="true">
+          <source media="(max-width: 767px)" srcSet="/images/underwater-mobile.jpg" />
+          <img
+            src="/images/underwater-desktop.jpg"
+            alt=""
+            className="h-full w-full object-cover"
+            fetchPriority="high"
+          />
+        </picture>
+      </div>
 
-      {/* Accessible description of the artwork's baked-in headline */}
+      {/* Accessible description of the artwork's baked-in headline (not rendered visually) */}
       <h1 className="sr-only">Are you ready to join the College of Dreamers?</h1>
 
-      {/* Gentle drifting light / shimmer over the whole scene */}
-      <div
-        aria-hidden="true"
-        className="animate-shimmer pointer-events-none absolute inset-0 mix-blend-screen"
-        style={{
-          background:
-            "radial-gradient(120% 80% at 50% -10%, rgba(255,255,255,0.35), transparent 55%)",
-        }}
-      />
+      {/* Atmosphere layered over the art */}
+      <UnderwaterFx />
+      <Bubbles count={20} />
 
-      <Bubbles count={24} />
-
-      {/* Interaction area anchored to the lower portion so it never covers the artwork's text */}
-      <div
-        ref={areaRef}
-        className="absolute inset-x-0 bottom-0 top-[58%] z-10 flex flex-col items-center justify-end px-6 pb-[7vh] sm:top-[62%] sm:pb-[8vh]"
-      >
-        <div className="animate-sway mb-5 sm:mb-7">
-          <p
-            className="text-center font-serif text-sm tracking-[0.18em] text-white sm:text-base"
-            style={{ textShadow: "0 2px 12px rgba(20,50,90,0.55)" }}
-          >
-            CHOOSE YOUR DESTINY
-          </p>
-        </div>
-
-        <div className="relative flex w-full max-w-md items-center justify-center gap-5 sm:gap-8">
-          {/* YES — opens the welcome video immediately */}
+      {/* Interaction area — anchored low so buttons sit below the question and above the seabed detail */}
+      <div className="absolute inset-x-0 bottom-0 top-[60%] z-10 flex flex-col items-center justify-center px-6 sm:top-[64%]">
+        <div className="flex w-full max-w-md flex-col items-center gap-4 sm:flex-row sm:justify-center sm:gap-6">
+          {/* YES — primary CTA, opens the welcome video immediately */}
           <button
-            onClick={() => setModalOpen(true)}
-            className="group relative inline-flex items-center gap-2 rounded-full px-9 py-3.5 font-serif text-base tracking-widest text-[oklch(0.35_0.09_240)] transition-transform duration-300 hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent sm:text-lg"
+            ref={yesRef}
+            onClick={handleYes}
+            className={`group relative inline-flex items-center justify-center rounded-full px-10 py-3.5 font-serif text-base tracking-[0.12em] text-[oklch(0.34_0.08_255)] outline-none transition-transform duration-300 hover:scale-[1.05] focus-visible:ring-2 focus-visible:ring-white/80 sm:text-lg ${
+              celebrating ? "animate-pop" : ""
+            }`}
             style={{
               background:
-                "linear-gradient(150deg, oklch(0.98 0.02 320), oklch(0.9 0.05 340) 45%, oklch(0.86 0.06 195))",
+                "linear-gradient(150deg, oklch(0.98 0.02 320) 0%, oklch(0.92 0.045 345) 42%, oklch(0.88 0.055 195) 100%)",
               boxShadow:
-                "0 10px 30px -8px oklch(0.7 0.08 340 / 0.8), inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -3px 8px rgba(140,90,140,0.25)",
+                "0 12px 34px -10px oklch(0.72 0.08 340 / 0.85), 0 0 22px -4px oklch(0.9 0.05 320 / 0.7), inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -3px 9px rgba(150,95,150,0.22)",
             }}
           >
             <span
               aria-hidden="true"
               className="animate-shimmer absolute inset-0 rounded-full"
               style={{
-                background:
-                  "radial-gradient(60% 60% at 30% 20%, rgba(255,255,255,0.85), transparent 60%)",
+                background: "radial-gradient(60% 55% at 32% 22%, rgba(255,255,255,0.9), transparent 62%)",
               }}
             />
-            <span className="relative">YES</span>
+            <span className="relative whitespace-nowrap">{"YES, I'M READY"}</span>
           </button>
 
-          {/* NO — flees from the cursor */}
+          {/* NO — genuinely flees from pointer + touch, always staying inside the viewport */}
           <button
             ref={noRef}
-            onMouseEnter={fleeNo}
-            onFocus={fleeNo}
-            onClick={fleeNo}
-            onTouchStart={(e) => {
+            onPointerEnter={flee}
+            onPointerDown={(e) => {
               e.preventDefault()
-              fleeNo()
+              flee()
             }}
-            aria-label="No — but this button keeps swimming away"
-            className="relative z-20 inline-flex items-center rounded-full px-8 py-3.5 font-serif text-base tracking-widest text-white transition-all duration-300 ease-out focus:outline-none sm:text-lg"
+            onFocus={flee}
+            disabled={celebrating || modalOpen}
+            aria-label="No, not yet — this button keeps swimming away"
+            className="inline-flex touch-none select-none items-center justify-center whitespace-nowrap rounded-full px-9 py-3.5 font-serif text-base tracking-[0.12em] text-[oklch(0.97_0.02_320)] outline-none transition-[left,top,transform] duration-300 ease-out sm:text-lg"
             style={{
-              transform: noMoved ? `translate(${noPos.x}px, ${noPos.y}px)` : undefined,
-              background: "linear-gradient(150deg, oklch(0.55 0.09 235), oklch(0.46 0.1 250))",
+              position: fled ? "fixed" : "relative",
+              left: fled ? noPos.x : undefined,
+              top: fled ? noPos.y : undefined,
+              zIndex: 30,
+              background:
+                "linear-gradient(150deg, oklch(0.7 0.07 220 / 0.55), oklch(0.55 0.09 245 / 0.6))",
+              border: "1px solid oklch(0.95 0.02 320 / 0.55)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
               boxShadow:
-                "0 10px 26px -10px rgba(10,40,80,0.9), inset 0 1px 0 rgba(255,255,255,0.35)",
+                "0 10px 26px -12px rgba(10,40,80,0.85), inset 0 1px 0 rgba(255,255,255,0.4)",
             }}
           >
-            {teases[dodges]}
+            {"NO, NOT YET"}
           </button>
         </div>
       </div>

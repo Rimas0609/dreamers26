@@ -2,9 +2,11 @@
 
 import { useEffect, useRef } from "react"
 
-// Drop your hosted welcome video URL here (e.g. an .mp4 in /public or a CDN link).
-// While empty, the modal shows the enchanted poster with a gentle "coming soon" note.
-const WELCOME_VIDEO_SRC = ""
+// ==========================================
+// ADD YOUR WELCOME VIDEO HERE
+// ==========================================
+// const WELCOME_VIDEO = "/videos/welcome-video.mp4";
+const WELCOME_VIDEO = ""
 
 export function WelcomeModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const closeRef = useRef<HTMLButtonElement>(null)
@@ -69,10 +71,10 @@ export function WelcomeModal({ open, onClose }: { open: boolean; onClose: () => 
 
         <div className="px-3 pb-3 sm:px-4 sm:pb-4">
           <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-[oklch(0.42_0.09_235)]">
-            {WELCOME_VIDEO_SRC ? (
+            {WELCOME_VIDEO ? (
               <video
                 className="h-full w-full object-cover"
-                src={WELCOME_VIDEO_SRC}
+                src={WELCOME_VIDEO}
                 poster="/images/welcome-video-poster.png"
                 controls
                 autoPlay
