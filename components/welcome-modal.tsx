@@ -68,11 +68,11 @@ export function WelcomeModal({ open, onClose }: { open: boolean; onClose: () => 
           </button>
         </div>
 
-        <div className="px-3 pb-3 sm:px-4 sm:pb-4">
-          <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-[oklch(0.42_0.09_235)]">
+        <div className="flex justify-center px-3 pb-3 sm:px-4 sm:pb-4">
+          <div className="relative aspect-[9/16] max-h-[70vh] overflow-hidden rounded-2xl bg-[oklch(0.42_0.09_235)]">
             {WELCOME_VIDEO ? (
               <video
-                className="h-full w-full object-contain bg-black"
+                className="h-full w-full object-cover"
                 poster="/images/welcome-video-poster.png"
                 controls
                 autoPlay
