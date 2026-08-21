@@ -3,10 +3,9 @@
 import { useEffect, useRef } from "react"
 
 // ==========================================
-// ADD YOUR WELCOME VIDEO HERE
+// WELCOME VIDEO
 // ==========================================
-// const WELCOME_VIDEO = "/videos/welcome-video.mp4";
-const WELCOME_VIDEO = ""
+const WELCOME_VIDEO = "/videos/welcome.mp4"
 
 export function WelcomeModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const closeRef = useRef<HTMLButtonElement>(null)
@@ -73,13 +72,15 @@ export function WelcomeModal({ open, onClose }: { open: boolean; onClose: () => 
           <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-[oklch(0.42_0.09_235)]">
             {WELCOME_VIDEO ? (
               <video
-                className="h-full w-full object-cover"
-                src={WELCOME_VIDEO}
+                className="h-full w-full object-contain bg-black"
                 poster="/images/welcome-video-poster.png"
                 controls
                 autoPlay
                 playsInline
-              />
+              >
+                <source src={WELCOME_VIDEO} type="video/mp4" />
+                Your browser can&apos;t play this video.
+              </video>
             ) : (
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
