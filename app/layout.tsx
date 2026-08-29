@@ -58,7 +58,7 @@ export default function RootLayout({
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
      
-      <footer className="w-full py-4 text-center text-sm text-gray-300">
+     <footer className="relative z-50 w-full py-4 text-center text-sm text-gray-300">
   Made by Rimas
 </footer>
  </body>
