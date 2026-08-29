@@ -59,7 +59,7 @@ export default function RootLayout({
         {process.env.NODE_ENV === 'production' && <Analytics />}
      
      <footer className="relative z-50 w-full py-4 text-center text-sm text-gray-300">
-  Made by Rimas
+  Made by Rimas & Rital.
 </footer>
  </body>
     </html>
