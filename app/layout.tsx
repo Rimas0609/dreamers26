@@ -57,7 +57,11 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
-      </body>
+     
+      <footer className="w-full py-4 text-center text-sm text-gray-300">
+  Made by Rimas
+</footer>
+ </body>
     </html>
   )
 }
